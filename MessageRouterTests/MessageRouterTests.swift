@@ -12,7 +12,15 @@ class MessageRouterTests: XCTestCase {
     func testAddFunction() {
         XCTAssertEqual(router.copyEntries().count, 0)
         router.add { _ in }
+        router.add { _ in }
         XCTAssertEqual(router.copyEntries().count, 1)
+    }
+    
+    func testAddMultipleFunction() {
+        XCTAssertEqual(router.copyEntries().count, 0)
+        router.addMultiple { _ in }
+        router.addMultiple { _ in }
+        XCTAssertEqual(router.copyEntries().count, 2)
     }
 
     func testAddRecipient() {
@@ -47,6 +55,20 @@ class MessageRouterTests: XCTestCase {
         router.remove(recipient: NSNumber(value: 42))
         XCTAssertEqual(router.copyEntries().count, 1)
         router.remove(recipient: recipient)
+        XCTAssertEqual(router.copyEntries().count, 0)
+    }
+    func testClearRecipient() {
+        XCTAssertEqual(router.copyEntries().count, 0)
+        let recipient = MessageRouterTestHelper()
+        router.addMultiple(recipient, type(of: recipient).doNothing)
+        router.addMultiple(recipient, type(of: recipient).doNothing)
+        router.addMultiple(recipient, type(of: recipient).doNothing)
+        XCTAssertEqual(router.copyEntries().count, 3)
+        router.clear()
+        XCTAssertEqual(router.copyEntries().count, 0)
+        router.addMultiple(recipient, type(of: recipient).doNothing)
+        XCTAssertEqual(router.copyEntries().count, 1)
+        router.clear()
         XCTAssertEqual(router.copyEntries().count, 0)
     }
 
@@ -115,7 +137,7 @@ class MessageRouterTests: XCTestCase {
         // Adds n recipients.
         if recipientCount > 0 {
             for _ in 1...recipientCount {
-                router.add { n in count += 1; XCTAssertEqual(n, message) }
+                router.addMultiple { n in count += 1; XCTAssertEqual(n, message) }
             }
         }
 

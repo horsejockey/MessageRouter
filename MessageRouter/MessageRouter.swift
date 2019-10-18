@@ -56,6 +56,41 @@ open class MessageRouter<T> {
     /**
      Convenience function for add(_:_:). Simply takes a function that will
      receive all messages for the life time of this instance, or until the
+     returned entry is removed. Multiple functions can be subscribed for the same object.
+     When using this method don't use the add function on the same instance.
+     
+     - parameter function: The function to receive any messages.
+     - returns: An opaque object that can be used to stop any further messages.
+     */
+    @discardableResult
+    open func addMultiple(_ function: @escaping MessageHandler) -> MessageRouterEntry<T> {
+        return addMultiple(self) { _ in function }
+    }
+    
+    /**
+     The given function will receive any messages for the life time of `object`.
+     Multiple functions can be subscribed for the same object. When using this
+     method don't use the add function on the same instance.
+     Typically called like this:
+     
+     recipients.addMultiple(self, self.dynamicType.handleMessage)
+     
+     - parameter object: The object that owns the given function.
+     - parameter function: The function that will be called with any messages. Typically a function on `object`.
+     - returns: An opaque object that can be used to stop any further messages.
+     */
+    @discardableResult
+    open func addMultiple<R: Recipient>(_ object: R, _ function: @escaping (R)->MessageHandler) -> MessageRouterEntry<T> {
+        let entry = MessageRouterEntry(object: object, function: { function($0 as! R) })
+        sync {
+            self.entries = self.entries.filter({ $0.object != nil }) + [entry]
+        }
+        return entry
+    }
+    
+    /**
+     Convenience function for add(_:_:). Simply takes a function that will
+     receive all messages for the life time of this instance, or until the
      returned entry is removed.
      
      - parameter function: The function to receive any messages.
@@ -80,29 +115,9 @@ open class MessageRouter<T> {
     open func add<R: Recipient>(_ object: R, _ function: @escaping (R)->MessageHandler) -> MessageRouterEntry<T> {
         let entry = MessageRouterEntry(object: object, function: { function($0 as! R) })
         sync {
-            self.entries = self.entries.filter({ $0.object != nil }) + [entry]
+            self.entries = self.entries.filter({ $0.object != nil && $0.object !== object }) + [entry]
         }
         return entry
-    }
-    
-    /**
-     Convenience function for perform(_:_:).
-     */
-    @discardableResult
-    open func perform(_ function: @escaping NoParameterHandler) -> MessageRouterEntry<T> {
-        return perform(self) { _ in function }
-    }
-    
-    /**
-     Performs the given function, ignoring the value sent.
-     
-     - parameter object: The object that owns the given function.
-     - parameter function: The function that will be called with any messages. Typically a function on `object`.
-     - returns: An opaque object that can be used to stop any further messages.
-     */
-    @discardableResult
-    open func perform<R: Recipient>(_ object: R, _ function: @escaping (R)->NoParameterHandler) -> MessageRouterEntry<T> {
-        return add(object) { object in { _ in function(object)() }}
     }
     
     /**
@@ -122,23 +137,13 @@ open class MessageRouter<T> {
     @discardableResult open func map<U, R: Recipient>(_ object: R, mapper: @escaping (T)->U) -> MessageRouter<U> {
         let mappedRouter = MessageRouter<U>()
         
-        add(object) { _ in
+        addMultiple(object) { _ in
             { value in
                 mappedRouter.send(mapper(value))
             }
         }
         
         return mappedRouter
-    }
-
-    /**
-     Removes the given entry from the list of recipients.
-
-     - parameter entry: The entry to remove.
-     */
-    @available(*, deprecated, message: "Use `remove(entry:)` instead.")
-    open func remove(_ entry: MessageRouterEntry<T>) {
-        remove(entry: entry)
     }
 
     /**
@@ -160,6 +165,15 @@ open class MessageRouter<T> {
     open func remove(recipient: Recipient) {
         sync {
             self.entries = self.entries.filter { $0.object !== recipient }
+        }
+    }
+    
+    /**
+     Removes all entries
+     */
+    open func clear() {
+        sync {
+            self.entries = []
         }
     }
 
