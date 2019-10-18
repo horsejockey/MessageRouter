@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "MessageRouter"
-  spec.version      = "0.1.5"
+  spec.version      = "1.0.0"
   spec.summary      = "Lightweight, type-safe message and notification passing broker."
   spec.description  = <<-DESC
   A lightweight, type-safe message and notification passing broker in Swift.
