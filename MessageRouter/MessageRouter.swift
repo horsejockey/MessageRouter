@@ -116,24 +116,7 @@ open class MessageRouter<T> {
     @discardableResult
     @available(*, deprecated, message: "Use `addMultiple` or `addOnce` instead.")
     open func add<R: Recipient>(_ object: R, _ function: @escaping (R)->MessageHandler) -> MessageRouterEntry<T> {
-        let entry = MessageRouterEntry(object: object, function: { function($0 as! R) })
-        sync {
-            self.entries = self.entries.filter({ $0.object != nil }) + [entry]
-        }
-        return entry
-    }
-    
-    /**
-     Convenience function for add(_:_:). Simply takes a function that will
-     receive all messages for the life time of this instance, or until the
-     returned entry is removed.
-     
-     - parameter function: The function to receive any messages.
-     - returns: An opaque object that can be used to stop any further messages.
-     */
-    @discardableResult
-    open func addOnce(_ function: @escaping MessageHandler) -> MessageRouterEntry<T> {
-        return addOnce(self) { _ in function }
+        return addMultiple(object, function)
     }
     
     /**
